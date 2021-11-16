@@ -1,3 +1,5 @@
+import { Photo } from './../../_models/photo';
+import { MembersService } from './../../_services/members.service';
 import { take } from 'rxjs/operators';
 import { AccountService } from './../../_services/account.service';
 import { environment } from './../../../environments/environment';
@@ -17,7 +19,7 @@ export class PhotoEditorComponent implements OnInit {
   hasBaseDropZoneOver: false;
   baseUrl = environment.apiUrl;
   user: User;
-  constructor(private accountService: AccountService) {
+  constructor(private accountService: AccountService,private memberService: MembersService) {
     this.accountService.currentUser$.pipe(take(1)).subscribe(user => this.user = user);
    }
 
@@ -29,8 +31,29 @@ export class PhotoEditorComponent implements OnInit {
     this.hasBaseDropZoneOver = e;
   }
 
+  setMainPhoto(photo : Photo){
+    this.memberService.setMainPhoto(photo.photoId).subscribe(() => {
+      this.user.photoUrl = photo.url;
+      this.accountService.setCurrentUser(this.user);
+      this.member.photoUrl = photo.url;
+      this.member.photos.forEach(p => {
+        if (p.isMain) {
+          p.isMain = false;
+        }
+        if (p.photoId === photo.photoId) {
+          p.isMain = true;
+        }
+      });
+    });
+  }
+
+  deletePhoto(photoId: number){
+    this.memberService.deletePhoto(photoId).subscribe(() => {
+      this.member.photos = this.member.photos.filter(x => x.photoId != photoId);
+    });
+  }
+
   initializeUploader(){
-    console.log(this.baseUrl + 'user/add-photo');
     this.uploader = new FileUploader({
       url:this.baseUrl + 'user/add-photo',
       authToken: `Bearer ${this.user.token}`,
